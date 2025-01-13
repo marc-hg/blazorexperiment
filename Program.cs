@@ -1,10 +1,18 @@
 using BlazorExperiments2.Components;
+using BlazorExperiments2.Services;
+using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddScoped<ThemeService>();
+builder.Services.AddRadzenComponents();
+
+// Add background services
+builder.Services.AddSingleton<IBackgroundTaskQueue>(sp => new BackgroundTaskQueue(100));
+builder.Services.AddHostedService<DummyBackgroundService>();
 
 var app = builder.Build();
 

@@ -1,0 +1,62 @@
+@page "/progress-demo"
+@rendermode InteractiveServer
+@using System.Threading
+@using BlazorExperiments2.Services
+@inject IBackgroundTaskQueue TaskQueue
+@inject ILogger<ProgressDemo> Logger
+
+<h3>Progress Demo</h3>
+
+<div class="mb-3">
+    <button class="btn btn-primary" @onclick="StartProcess" disabled="@isProcessing">Start Process</button>
+</div>
+
+@if (isProcessing)
+{
+    <div class="progress" style="height: 20px;">
+        <div class="progress-bar" role="progressbar" style="width: @($"{progress}%")" 
+             aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100">
+            @progress%
+        </div>
+    </div>
+}
+
+@code {
+    private bool isProcessing = false;
+    private int progress = 0;
+
+    private async Task StartProcess()
+    {
+        isProcessing = true;
+        progress = 0;
+        StateHasChanged();
+
+        try
+        {
+            await TaskQueue.QueueBackgroundWorkItemAsync(async token =>
+            {
+                for (int i = 0; i <= 10; i++)
+                {
+                    if (token.IsCancellationRequested) break;
+                    
+                    progress = i * 10;
+                    Logger.LogInformation($"Progress: {progress}%");
+                    await Task.Delay(1000, token);
+                    
+                    // Since we're in a background thread, we need to notify the UI
+                    await InvokeAsync(StateHasChanged);
+                }
+                
+                Logger.LogInformation("Process finished!");
+                isProcessing = false;
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error occurred while processing");
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+} 
